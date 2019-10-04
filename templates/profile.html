@@ -1,0 +1,108 @@
+<!-- templates/profile.html -->
+
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="title">
+  Welcome, {{ user.name }}!
+</h1>
+    <ul>
+    {% for task in tasks %}
+        <li draggable="true" id="{{ task.id }}" style="color: {{ 'green' if task.completed else 'black' }}">{{ task.content }} : {{ task.createdAt }}</li>
+    {% endfor %}
+    </ul>
+    <form action="/task" method="post">
+        <input type="text" name="content" placeholder="New task">
+        <input type="hidden" name="uid" value="{{ user.id }}">
+        <input type="submit" value="Add">
+    </form>
+
+    <div class="dropzone" style="background-color: darksalmon; width: 200px; height: 300px; border: 2px solid black">
+        <h3 style="color: white">Drag to delete</h3>
+    </div>
+
+    <script>
+    const lis = document.getElementsByTagName('li');
+    for (const li of lis){
+        li.addEventListener('dblclick',e=>{
+            const taskId = e.target.id;
+            let content = e.target.innerText.slice(0,e.target.innerText.indexOf(':'));
+            newContent = prompt('Enter a new content of task',content);
+            if(!newContent || newContent === content){
+                return 0;
+            }
+            fetch('http://localhost:5000/task',{
+                method:'PATCH',
+                headers:{
+                    'Content-Type': 'application/json'
+                },
+                body:JSON.stringify({
+                    taskId,
+                    content: newContent
+                })
+            }).then(()=>document.location.reload(true))
+        });
+
+        li.addEventListener('click',e=>{
+            const taskId = e.target.id;
+            fetch('http://localhost:5000/task/'+taskId,{
+                method:'PUT'
+            }).then(()=>document.location.reload(true))
+        });
+
+        let dragged;
+
+        /* events fired on the draggable target */
+        document.addEventListener("drag", function(event) {
+
+        }, false);
+
+        document.addEventListener("dragstart", function(event) {
+          // store a ref. on the dragged elem
+          dragged = event.target;
+          // make it half transparent
+          event.target.style.opacity = .5;
+        }, false);
+
+        document.addEventListener("dragend", function(event) {
+          // reset the transparency
+          event.target.style.opacity = "";
+        }, false);
+
+        /* events fired on the drop targets */
+        document.addEventListener("dragover", function(event) {
+          // prevent default to allow drop
+          event.preventDefault();
+        }, false);
+
+        document.addEventListener("dragenter", function(event) {
+          // highlight potential drop target when the draggable element enters it
+          if (event.target.className == "dropzone") {
+            event.target.style.background = "purple";
+          }
+
+        }, false);
+
+        document.addEventListener("dragleave", function(event) {
+          // reset background of potential drop target when the draggable element leaves it
+          if (event.target.className == "dropzone") {
+            event.target.style.background = "darksalmon";
+          }
+
+        }, false);
+
+        document.addEventListener("drop", function(event) {
+          // prevent default action (open as link for some elements)
+          event.preventDefault();
+          // move dragged elem to the selected drop target
+          if (event.target.className == "dropzone") {
+            event.target.style.background = "darksalmon";
+            dragged.parentNode.removeChild( dragged );
+            fetch('http://localhost:5000/task/'+dragged.id,{
+                method:'DELETE'
+            })
+          }
+        }, false);
+    }
+</script>
+{% endblock %}
